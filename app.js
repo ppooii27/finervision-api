@@ -2,11 +2,12 @@
 const express = require('express');
 const app = express();
 const Comments = require('./db/model/Comments');
+const { Op } = require('@sequelize/core');
 
 const cors = require('cors');
 var corsConfig = {
 	origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
-	methods: ['POST'],
+	methods: ['POST', 'GET'],
 	optionsSuccessStatus: 200,
 };
 
@@ -30,6 +31,8 @@ app.options('*', function (req, res) {
 	res.status(200).end();
 });
 
+/* -------------------------------------------------------------------------- */
+
 app.post('/comments', cors(corsConfig), async (req, res) => {
 	try {
 		const comment = await Comments.create({
@@ -47,9 +50,60 @@ app.post('/comments', cors(corsConfig), async (req, res) => {
 	}
 });
 
-// curl -X POST -H "Content-Type: application/json" -d '{"firstname":"daniel", "surname":"lo", "email": "ppooi27@gmail.com", "telephone": "12345678", "gender": "M", "dob": "2021-10-29", "comments": "commmmmmmmmmentttt"}' http://127.0.0.1:3000/comments
+/* -------------------------------------------------------------------------- */
+
+app.get('/getCommentsByFirstname/:firstname?', cors(corsConfig), async (req, res, next) => {
+	if (req.params.firstname === undefined) {
+		next()
+	} else {
+		getCommentsByFirstname(req, res, next)
+	}
+}, async (req, res, next) => {
+	getAllComments(req, res, next)
+});
 
 /* -------------------------------------------------------------------------- */
+
+app.get('/comments/', cors(corsConfig), async (req, res, next) => {
+	getAllComments(req, res, next)
+});
+
+/* -------------------------------------------------------------------------- */
+
+const getCommentsByFirstname = async (req, res, next) => {
+	try {
+		console.log(req.params.firstname)
+		const comment = await Comments.findAll({
+			where: {
+				firstname: {
+					[Op.eq]: req.params.firstname,
+				}
+			},
+			order: [['createdAt', 'DESC']],
+		});
+		res.status(201).json(comment);
+	} catch (error) {
+		res.status(500).json({ message: error.message });
+	}
+}
+
+/* -------------------------------------------------------------------------- */
+
+const getAllComments = async (req, res, next) => {
+	try {
+		const comment = await Comments.findAll({
+			where: {
+				firstname: {
+					[Op.not]: null,
+				}
+			},
+			order: [['createdAt', 'DESC']],
+		});
+		res.status(201).json(comment);
+	} catch (error) {
+		res.status(500).json({ message: error.message });
+	}
+}
 
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, (err) => {
